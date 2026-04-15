@@ -1,36 +1,55 @@
 import os
+import requests
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
 api_key = os.getenv("OPENWEATHERMAP_API_KEY")
 
-import requests
+# Add this line to give your website a title in the browser tab
+st.set_page_config(page_title="Weather Vibe App")
+
+# --- HEADER SECTION ---
+st.title("🌡️ Weather Vibe Check")
+st.markdown("### Know your city's mood instantly")
+st.write("This app uses real-time data to tell you if it's a good day to go out.")
+
+# --- HORIZONTAL LINE ---
+st.divider()
 
 # Add this line before the 'url' line:
-city = input("Enter a city name: ")
+city = st.text_input("Enter a city name: ",placeholder="Ayodhya",key="city_input")
 
-# We use an 'f-string' to bake the city and key directly into the URL
-url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+# This 'if' statement is the most important part of a Streamlit app.
+# It tells Python: "Only run the code below if the user has typed something in the box."
+if city:
+    # Level 1: Inside the "city" check
+    with st.spinner(f"Getting weather for {city}..."):
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+        response = requests.get(url)
 
-# This sends the request and stores the response in a variable
-response = requests.get(url)
+    # This 'if' must be indented to stay inside 'if city:'
+    if response.status_code == 200:
+        # Level 2: Inside the "success" check
+        data = response.json()
+        temp = data["main"]["temp"]
+        description = data["weather"][0]["description"]
 
-# This converts the server's text response into a Python Dictionary (key-value pairs)
-data = response.json()
-# To get temperature, we look inside 'main' then inside 'temp'
-temp = data["main"]["temp"]
+        if temp > 30:
+            vibe = "Too hot for humans. Stay in the AC."
+            vibe_box = st.error 
+        elif temp < 15:
+            vibe = "Chai and sweater weather."
+            vibe_box = st.info  
+        else:
+            vibe = "The weather is actually perfect."
+            vibe_box = st.success 
 
-# To get the description, we look inside the 'weather' list at index 0
-description = data["weather"][0]["description"]
+        st.metric(label=f"Current temp in {city}", value=f"{temp}°C")
+        st.write(f"**Condition:** {description.capitalize()}")
+        vibe_box(f"**Vibe:** {vibe}")
 
-if temp > 30:
-    vibe = "Too hot for humans. Stay in the AC."
-elif temp < 15:
-    vibe = "Chai and sweater weather."
-else:
-    vibe = "The weather is actually perfect."
-
-print(f"Current temp in {city}: {temp}°C")
-print(f"Condition: {description}")
-print(f"Vibe: {vibe}")
+    else:
+        # This aligns with 'if response.status_code == 200'
+        st.error("City not found! Please check the spelling.")

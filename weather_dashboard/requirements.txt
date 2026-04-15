@@ -1,3 +1,4 @@
 # Add your library dependencies here
 requests
 python-dotenv
+streamlit
