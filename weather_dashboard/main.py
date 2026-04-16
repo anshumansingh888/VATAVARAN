@@ -1,55 +1,29 @@
-import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import requests
-import streamlit as st
+import os
 from dotenv import load_dotenv
 
+# Load the API key from your root .env file
 load_dotenv()
+API_KEY = os.getenv("OPENWEATHERMAP_API_KEY")
 
-api_key = os.getenv("OPENWEATHERMAP_API_KEY")
+# This is the "app" that Uvicorn was looking for!
+app = FastAPI()
 
-# Add this line to give your website a title in the browser tab
-st.set_page_config(page_title="Weather Vibe App")
+# This allows your HTML/JS frontend to talk to this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# --- HEADER SECTION ---
-st.title("🌡️ Weather Vibe Check")
-st.markdown("### Know your city's mood instantly")
-st.write("This app uses real-time data to tell you if it's a good day to go out.")
-
-# --- HORIZONTAL LINE ---
-st.divider()
-
-# Add this line before the 'url' line:
-city = st.text_input("Enter a city name: ",placeholder="Ayodhya",key="city_input")
-
-# This 'if' statement is the most important part of a Streamlit app.
-# It tells Python: "Only run the code below if the user has typed something in the box."
-if city:
-    # Level 1: Inside the "city" check
-    with st.spinner(f"Getting weather for {city}..."):
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
-        response = requests.get(url)
-
-    # This 'if' must be indented to stay inside 'if city:'
-    if response.status_code == 200:
-        # Level 2: Inside the "success" check
-        data = response.json()
-        temp = data["main"]["temp"]
-        description = data["weather"][0]["description"]
-
-        if temp > 30:
-            vibe = "Too hot for humans. Stay in the AC."
-            vibe_box = st.error 
-        elif temp < 15:
-            vibe = "Chai and sweater weather."
-            vibe_box = st.info  
-        else:
-            vibe = "The weather is actually perfect."
-            vibe_box = st.success 
-
-        st.metric(label=f"Current temp in {city}", value=f"{temp}°C")
-        st.write(f"**Condition:** {description.capitalize()}")
-        vibe_box(f"**Vibe:** {vibe}")
-
-    else:
-        # This aligns with 'if response.status_code == 200'
-        st.error("City not found! Please check the spelling.")
+@app.get("/weather")
+def get_weather(city: str):
+    # The server makes the request to OpenWeatherMap safely
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+    response = requests.get(url)
+    
+    # It sends the JSON data back to your website
+    return response.json()
